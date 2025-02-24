@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice & Inventory System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            width: 200mm; /* Adjusted for thermal printer width */
+            margin: 0 auto;
+            padding: 10px;
+        }
+        .invoice {
+            border: 1px solid #000;
+            padding: 10px;
+            width: 80mm; /* Adjusted for thermal printer width */
+            margin: auto; /* Center the invoice container */
+            box-sizing: border-box; /* Include padding and border in the width */
+        }
+        .header, .footer {
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .details {
+            margin: 10px 0;
+        }
+        .details p {
+            margin: 5px 0;
+        }
+        table {
+            width: 100%; /* Table width fits within the invoice */
+            border-collapse: collapse;
+            margin: 10px 0;
+            table-layout: fixed; /* Ensure columns don't overflow */
+        }
+        table th, table td {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: left;
+            word-wrap: break-word; /* Prevent text overflow */
+        }
+        #invoice-table select {
+            word-wrap: break-word;
+            white-space: normal; /* Ensure text wraps properly */
+            width: 100%; /* Ensure the select box takes the full width of the cell */
+        }
+        .total {
+            margin-top: 10px;
+            text-align: right;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 10px;
+        }
+        #inventory-section, #add-inventory-section, #search-section {
+            margin-top: 20px;
+        }
+        #add-inventory-section input, #search-section input {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        #add-inventory-section button, #search-section button {
+            width: 100%;
+            padding: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .buttons {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .buttons button {
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+        .delete-icon {
+            cursor: pointer;
+            color: #ff4444; /* Red color */
+            font-size: 16px; /* Larger size */
+            font-weight: bold;
+            transition: color 0.3s ease, transform 0.3s ease; /* Smooth transition */
+        }
+        .delete-icon:hover {
+            color: #cc0000; /* Darker red on hover */
+            transform: scale(1.2); /* Slightly enlarge on hover */
+        }
+        .stock-message {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        @media print {
+            #inventory-section, #add-inventory-section, #search-section, .no-print, #stock-info {
+                display: none !important;
+            }
+            input, select {
+                border: none;
+                background: none;
+                outline: none;
+                box-shadow: none;
+                pointer-events: none;
+                width: auto;
+                padding: 0;
+                margin: 0;
+                appearance: none;
+                -webkit-appearance: none;
+            }
+            td input[type="number"], td select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice">
+        <!-- Header -->
+        <div class="header">
+            <h1> INVOICE </h1>
+            <p><strong>Customer Copy</strong></p>
+            <p><strong>IHSAN TRADERS</strong></p>
+        </div>
+
+        <!-- Customer Details -->
+        <div class="details">
+            <p><strong>Ph #:</strong> +923000579411</p>
+        </div>
+
+        <!-- Order Details -->
+        <div class="details">
+            <p><strong>Date:</strong> <span id="invoice-date"></span></p>
+            <p><strong>Order #:</strong> <span id="invoice-number">0000</span></p>
+            <p><strong>Customer Name:</strong> <input type="text" id="customer-name" placeholder="Enter customer name"></p>
+        </div>
+
+        <!-- Stock Information -->
+        <div id="stock-info" class="stock-message"></div>
+
+        <!-- Items Table -->
+        <table id="invoice-table">
+            <thead>
+                <tr>
+                    <th style="width: 37%;">Description</th>
+                    <th style="width: 19%;">Qty</th>
+                    <th style="width: 27%;">Price</th>
+                    <th style="width: 23%;">Total</th>
+                    <th class="no-print"></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-right total">Grand Total:</td>
+                    <td class="total" id="grand-total">0</td>
+                    <td class="no-print"></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Buttons -->
+        <div class="buttons no-print">
+            <button onclick="addRow()">Add Item</button>
+            <button id="print-button" onclick="generateInvoice()">Print</button>
+            <button onclick="newInvoice()">New Invoice</button>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Thank You For Visiting!</strong></p>
+            <p>Software by IRFAN BETTANI.</p>
+            <p>Ph: +923491939236</p>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div id="search-section">
+        <h3>Search Inventory</h3>
+        <input type="text" id="search-item" placeholder="Search item by name" oninput="searchItem()">
+        <div id="search-results"></div>
+    </div>
+
+    <!-- Inventory Section -->
+    <div id="inventory-section">
+        <h3>Inventory</h3>
+        <table id="inventory-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Stock</th>
+                    <th>Purchase Price</th>
+                    <th>Sell Price</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Add/Update Inventory Section -->
+    <div id="add-inventory-section">
+        <h3>Add/Update Inventory</h3>
+        <input type="text" id="item-name" placeholder="Item Name">
+        <input type="number" id="item-stock" placeholder="Stock">
+        <input type="number" id="purchase-price" placeholder="Purchase Price">
+        <input type="number" id="sell-price" placeholder="Sell Price">
+        <button onclick="addInventory()">Add/Update Item</button>
+    </div>
+
+    <script>
+        // Initialize inventory data
+        let inventory = JSON.parse(localStorage.getItem("inventory")) || {
+            "Medium 6 Person (9900)": { stock: 10, purchasePrice: 80, sellPrice: 9900 },
+            "Zeera Raita": { stock: 20, purchasePrice: 40, sellPrice: 110 },
+            "Mineral Water": { stock: 50, purchasePrice: 30, sellPrice: 110 },
+            "Pepsi 1.5": { stock: 30, purchasePrice: 50, sellPrice: 220 }
+        };
+
+        // Function to populate the inventory table
+        function populateInventory() {
+            let inventoryTable = document.querySelector("#inventory-table tbody");
+            inventoryTable.innerHTML = ""; // Clear existing rows
+
+            for (let item in inventory) {
+                let row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${item}</td>
+                    <td>${inventory[item].stock}</td>
+                    <td>${inventory[item].purchasePrice}</td>
+                    <td>${inventory[item].sellPrice}</td>
+                    <td><span class="delete-icon" onclick="deleteInventoryItem('${item}')">✗</span></td>
+                `;
+                inventoryTable.appendChild(row);
+            }
+        }
+
+        // Function to add or update an inventory item
+        function addInventory() {
+            let itemName = document.getElementById("item-name").value;
+            let itemStock = parseInt(document.getElementById("item-stock").value);
+            let purchasePrice = parseFloat(document.getElementById("purchase-price").value);
+            let sellPrice = parseFloat(document.getElementById("sell-price").value);
+
+            if (!itemName || itemStock < 0 || purchasePrice < 0 || sellPrice < 0) {
+                alert("Invalid item details!");
+                return;
+            }
+
+            // Add or update the item in the inventory
+            inventory[itemName] = { stock: itemStock, purchasePrice: purchasePrice, sellPrice: sellPrice };
+            localStorage.setItem("inventory", JSON.stringify(inventory)); // Save to localStorage
+            populateInventory(); // Refresh the inventory table
+            alert("Inventory updated!");
+        }
+
+        // Function to delete an inventory item
+        function deleteInventoryItem(itemName) {
+            if (confirm(`Are you sure you want to delete ${itemName}?`)) {
+                delete inventory[itemName];
+                localStorage.setItem("inventory", JSON.stringify(inventory)); // Save to localStorage
+                populateInventory(); // Refresh the inventory table
+            }
+        }
+
+        // Function to search for an item in the inventory
+        function searchItem() {
+            let searchTerm = document.getElementById("search-item").value.toLowerCase();
+            let resultsDiv = document.getElementById("search-results");
+            resultsDiv.innerHTML = ""; // Clear previous results
+
+            if (!searchTerm) {
+                return; // Exit if search term is empty
+            }
+
+            for (let item in inventory) {
+                if (item.toLowerCase().includes(searchTerm)) {
+                    let itemDetails = inventory[item];
+                    let resultItem = document.createElement("div");
+                    resultItem.innerHTML = `
+                        <p><strong>Item:</strong> ${item}</p>
+                        <p><strong>Stock:</strong> ${itemDetails.stock}</p>
+                        <p><strong>Purchase Price:</strong> ${itemDetails.purchasePrice}</p>
+                        <p><strong>Sell Price:</strong> ${itemDetails.sellPrice}</p>
+                        <hr>
+                    `;
+                    resultsDiv.appendChild(resultItem);
+                }
+            }
+        }
+
+        // Function to add a row to the invoice table
+        function addRow() {
+            let table = document.getElementById("invoice-table").getElementsByTagName('tbody')[0];
+            let newRow = table.insertRow();
+            let itemOptions = Object.keys(inventory).map(item => `<option value="${item}">${item}</option>`).join("");
+
+            newRow.innerHTML = `
+                <td>
+                    <select onchange="updatePrice(this)">
+                        <option value="">Select Item</option>
+                        ${itemOptions}
+                    </select>
+                </td>
+                <td><input type="number" value="1" min="1" oninput="updateTotal(this)"></td>
+                <td><input type="number" value="0" min="0" oninput="updateTotal(this)" readonly></td>
+                <td class="item-total">0</td>
+                <td class="no-print"><span class="delete-icon" onclick="removeRow(this)">✗</span></td>
+            `;
+        }
+
+        // Function to update the price and stock information when an item is selected
+        function updatePrice(select) {
+            let row = select.parentElement.parentElement;
+            let priceInput = row.cells[2].querySelector("input");
+            let item = select.value;
+
+            if (item && inventory[item]) {
+                priceInput.value = inventory[item].sellPrice; // Set the sell price
+                updateTotal(priceInput); // Update the total
+
+                // Display stock information
+                let stockInfoDiv = document.getElementById("stock-info");
+                if (inventory[item].stock <= 0) {
+                    stockInfoDiv.textContent = `Out of Stock: ${item}`;
+                    stockInfoDiv.style.color = "red";
+                    disablePrintButton(true); // Disable print button
+                } else {
+                    stockInfoDiv.textContent = `Stock Available: ${item} (${inventory[item].stock})`;
+                    stockInfoDiv.style.color = "green";
+                    disablePrintButton(false); // Enable print button
+                }
+            } else {
+                priceInput.value = 0; // Reset the price if no item is selected
+                updateTotal(priceInput);
+                document.getElementById("stock-info").textContent = ""; // Clear stock info
+                disablePrintButton(false); // Enable print button
+            }
+        }
+
+        // Function to disable or enable the print button
+        function disablePrintButton(disable) {
+            let printButton = document.getElementById("print-button");
+            printButton.disabled = disable;
+        }
+
+        // Function to update the total for a row
+        function updateTotal(element) {
+            let row = element.parentElement.parentElement;
+            let qty = parseInt(row.cells[1].querySelector("input").value); // Parse as integer
+            let price = parseInt(row.cells[2].querySelector("input").value); // Parse as integer
+            let total = qty * price;
+            row.cells[3].textContent = total; // Display without decimal places
+            updateGrandTotal();
+
+            // Check stock for the selected item
+            let itemSelect = row.cells[0].querySelector("select");
+            let selectedItem = itemSelect.value;
+            let stockInfoDiv = document.getElementById("stock-info");
+
+            if (selectedItem && inventory[selectedItem]) {
+                let availableStock = inventory[selectedItem].stock;
+                if (qty > availableStock) {
+                    stockInfoDiv.textContent = `Insufficient Stock: Only ${availableStock} available for ${selectedItem}`;
+                    stockInfoDiv.style.color = "red";
+                    disablePrintButton(true); // Disable print button
+                } else {
+                    stockInfoDiv.textContent = `Stock Available: ${selectedItem} (${availableStock})`;
+                    stockInfoDiv.style.color = "green";
+                    disablePrintButton(false); // Enable print button
+                }
+            } else {
+                stockInfoDiv.textContent = ""; // Clear stock info if no item is selected
+                disablePrintButton(false); // Enable print button
+            }
+        }
+
+        // Function to update the grand total
+        function updateGrandTotal() {
+            let grandTotal = 0;
+            document.querySelectorAll(".item-total").forEach(total => {
+                grandTotal += parseInt(total.textContent) || 0; // Parse as integer
+            });
+            document.getElementById("grand-total").textContent = grandTotal; // Display without decimal places
+        }
+
+        // Function to remove a row from the invoice table
+        function removeRow(element) {
+            element.parentElement.parentElement.remove();
+            updateGrandTotal();
+            checkStockForAllItems(); // Recheck stock after removing an item
+        }
+
+        // Function to check stock for all items in the invoice
+        function checkStockForAllItems() {
+            let outOfStock = false;
+            let stockInfoDiv = document.getElementById("stock-info");
+
+            document.querySelectorAll("#invoice-table tbody tr").forEach(row => {
+                let item = row.cells[0].querySelector("select").value;
+                let qty = parseInt(row.cells[1].querySelector("input").value);
+                if (item && inventory[item] && qty > inventory[item].stock) {
+                    outOfStock = true;
+                    stockInfoDiv.textContent = `Insufficient Stock: Only ${inventory[item].stock} available for ${item}`;
+                    stockInfoDiv.style.color = "red";
+                }
+            });
+
+            if (outOfStock) {
+                disablePrintButton(true); // Disable print button
+            } else {
+                stockInfoDiv.textContent = ""; // Clear stock info if no out-of-stock items
+                disablePrintButton(false); // Enable print button
+            }
+        }
+
+        // Function to generate the invoice
+        function generateInvoice() {
+            let outOfStock = false;
+            let itemsToUpdate = []; // Store items and their quantities to update stock
+
+            // Check stock for all items in the invoice
+            document.querySelectorAll("#invoice-table tbody tr").forEach(row => {
+                let item = row.cells[0].querySelector("select").value;
+                let qty = parseInt(row.cells[1].querySelector("input").value);
+                if (item && inventory[item]) {
+                    if (qty > inventory[item].stock) {
+                        outOfStock = true;
+                    } else {
+                        // Add item and quantity to the list for updating stock
+                        itemsToUpdate.push({ item, qty });
+                    }
+                }
+            });
+
+            if (outOfStock) {
+                alert("Cannot generate invoice. One or more items exceed available stock.");
+                return;
+            }
+
+            // Update inventory stock
+            itemsToUpdate.forEach(({ item, qty }) => {
+                inventory[item].stock -= qty; // Deduct the sold quantity from stock
+            });
+
+            // Save updated inventory to localStorage
+            localStorage.setItem("inventory", JSON.stringify(inventory));
+
+            // Refresh the inventory table to reflect updated stock
+            populateInventory();
+
+            // Print the invoice
+            updateDateTime();
+            window.print(); // Print the invoice
+        }
+
+        // Function to increment the invoice number
+        function incrementInvoiceNumber() {
+            let invoiceNumberElement = document.getElementById("invoice-number");
+            let currentNumber = parseInt(invoiceNumberElement.textContent);
+            invoiceNumberElement.textContent = (currentNumber + 1).toString().padStart(4, '0'); // Increment and pad with leading zeros
+        }
+
+        // Function to create a new invoice
+        function newInvoice() {
+            incrementInvoiceNumber(); // Increment the invoice number
+            updateDateTime(); // Update the date and time
+
+            // Clear the invoice table
+            let tableBody = document.querySelector("#invoice-table tbody");
+            tableBody.innerHTML = "";
+
+            // Reset the customer name field
+            document.getElementById("customer-name").value = "";
+
+            // Reset the grand total
+            document.getElementById("grand-total").textContent = "0";
+
+            // Clear the stock info message
+            document.getElementById("stock-info").textContent = "";
+
+            // Enable the print button (if it was disabled)
+            disablePrintButton(false);
+        }
+
+        // Function to update the date and time
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById("invoice-date").textContent = now.toLocaleString();
+        }
+
+        // Continuously update the date and time every second
+        setInterval(updateDateTime, 1000);
+
+        // Call updateDateTime once on page load to initialize the date and time
+        updateDateTime();
+
+        // Populate the inventory table on page load
+        populateInventory();
+    </script>
+</body>
+</html>
